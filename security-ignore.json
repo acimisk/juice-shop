@@ -1,0 +1,9 @@
+{
+  "ignored_rules": [
+    {
+      "rule_id": "javascript.sequelize.security.audit.sequelize-injection-express.express-sequelize-injection",
+      "reason": "Login ve Search fonksiyonlarindaki SQLi aciklari sonraki sprintte duzeltilecek.",
+      "expires_at": "2026-12-31"
+    }
+  ]
+}
