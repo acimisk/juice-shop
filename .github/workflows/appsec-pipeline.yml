@@ -11,6 +11,8 @@ jobs:
   semgrep-scan:
     name: Run Semgrep SAST
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write # SARIF çıktısını GitHub Security sekmesine yüklemek için şart
 
     steps:
       - name: Checkout Code
@@ -26,12 +28,20 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install semgrep
 
-      - name: Run Semgrep Scan
+      - name: Run Semgrep SARIF Scan
         run: |
-          semgrep scan --config=auto --json -o semgrep-results.json || true
+          semgrep scan --config=auto --sarif -o semgrep-results.sarif || true
 
+      # Çıktıyı zip olarak indirmek için
       - name: Upload Scan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-results
-          path: semgrep-results.json
+          path: semgrep-results.sarif
+
+      # Çıktıyı doğrudan GitHub'ın "Security -> Code scanning" sekmesine basar
+      - name: Upload to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep-results.sarif
