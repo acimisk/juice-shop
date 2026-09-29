@@ -1,49 +1,62 @@
 name: AppSec DevSecOps Pipeline
-
 on:
   push:
     branches: ["master", "main"]
   pull_request:
     branches: ["master", "main"]
   workflow_dispatch:
-
 jobs:
   semgrep-scan:
     name: Run Semgrep SAST & Gate
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install Semgrep
         run: |
           python3 -m pip install --upgrade pip
           pip install semgrep
-
       - name: Run Semgrep SARIF Scan
         run: |
           semgrep scan --config=auto --sarif -o semgrep-results.sarif || true
-
       - name: Upload Scan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-results
           path: semgrep-results.sarif
-
       - name: Upload to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: semgrep-results.sarif
-
       - name: Security Gate & Triage
         run: |
           python3 scripts/triage_sarif.py
+  sca-scan:
+    name: Run Trivy SCA Dependency Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Run Trivy Dependency Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'                
+          scan-ref: '.'                  
+          format: 'sarif'                
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'      
+      - name: Upload Trivy SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-sca'          
